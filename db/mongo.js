@@ -1,28 +1,33 @@
-const { MongoClient, ServerApiVersion } = require('mongodb');
-require('dotenv').config();
-const uri = process.env.MONGO_URI
-//const uri = 'mongodb+srv://pocketuxdev:IwzOP4OGwzfoL8vz@cluster0.8wfjjdf.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+// db/mongo.js
+const { MongoClient, ServerApiVersion } = require("mongodb");
 
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
-const client = new MongoClient(uri, {
+const uri = process.env.MONGO_URI;
+const options = {
   serverApi: {
     version: ServerApiVersion.v1,
     strict: true,
     deprecationErrors: true,
-  }
-})
+  },
+};
 
-const validatedb = async  () => {
-    try {
-      await  client.connect()
-      console.log('se conecto');
-    } catch (error) {
-      console.error(error);
-    }
+let client;
+let clientPromise;
+
+if (!process.env.MONGO_URI) {
+  throw new Error("Falta MONGO_URI en las variables de entorno");
 }
 
+if (process.env.NODE_ENV === "development") {
+  // Reutilizar conexión en desarrollo
+  if (!global._mongoClientPromise) {
+    client = new MongoClient(uri, options);
+    global._mongoClientPromise = client.connect();
+  }
+  clientPromise = global._mongoClientPromise;
+} else {
+  // Nueva conexión en producción (Vercel)
+  client = new MongoClient(uri, options);
+  clientPromise = client.connect();
+}
 
-validatedb()
-
-
-module.exports = client;
+module.exports = clientPromise;
